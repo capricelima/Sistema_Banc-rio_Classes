@@ -1,0 +1,119 @@
+from datetime import datetime
+
+# Classes para as transações e histórico
+class Transacao:
+    def __init__(self, valor: float):
+        self.valor = valor
+        self.data_hora = datetime.now()
+
+    def registrar(self, conta):
+        conta.historico.adicionar_transacao(self)
+
+class Historico:
+    def __init__(self):
+        self.transacoes = []
+
+    def adicionar_transacao(self, transacao: Transacao):
+        self.transacoes.append(transacao)
+
+# Classe para o cliente
+class Cliente:
+    def __init__(self, nome: str, cpf: str, endereco: str):
+        self.nome = nome
+        self.cpf = cpf
+        self.endereco = endereco
+        self.contas = []
+
+    def adicionar_conta(self, conta):
+        self.contas.append(conta)
+
+# Classe para conta bancária
+class Conta:
+    def __init__(self, numero: int, agencia: str, cliente: Cliente):
+        self.saldo = 0.0
+        self.numero = numero
+        self.agencia = agencia
+        self.cliente = cliente
+        self.historico = Historico()
+        self.cliente.adicionar_conta(self)
+
+    def sacar(self, valor: float) -> bool:
+        if valor > self.saldo:
+            print('Saldo insuficiente!')
+            return False
+        self.saldo -= valor
+        transacao = Transacao(-valor)
+        transacao.registrar(self)
+        return True
+
+    def depositar(self, valor: float) -> bool:
+        if valor <= 0:
+            print('Operação falhou. Informe um valor válido!')
+            return False
+        self.saldo += valor
+        transacao = Transacao(valor)
+        transacao.registrar(self)
+        return True
+
+    def mostrar_saldo(self) -> float:
+        return self.saldo
+
+# Classe para conta corrente
+class ContaCorrente(Conta):
+    def __init__(self, numero: int, agencia: str, cliente: Cliente, limite: float, limite_saques: int):
+        super().__init__(numero, agencia, cliente)
+        self.limite = limite
+        self.limite_saques = limite_saques
+        self.numero_saques = 0
+
+# Interface de menu
+menu = """
+Bom dia!
+Qual operação deseja fazer?
+
+[d] Depositar
+[s] Sacar
+[e] Extrato
+[q] Sair
+
+=> """
+
+# Inicializando
+clientes = {}
+cliente_atual = None
+conta_atual = None
+
+while True:
+    opcao = input(menu)
+
+    if opcao == 'd':
+        if conta_atual:
+            valor_deposito = float(input('Qual valor deseja depositar? Obs: Não serão aceitos moedas, apenas notas.'))
+            if conta_atual.depositar(valor_deposito):
+                print(f'Valor depositado: R$ {valor_deposito}. Saldo atual: R$ {conta_atual.mostrar_saldo():.2f}')
+        else:
+            print('Conta não selecionada.')
+
+    elif opcao == 's':
+        if conta_atual:
+            valor_saque = float(input('Qual valor deseja sacar?'))
+            if conta_atual.sacar(valor_saque):
+                print(f'Valor sacado: R$ {valor_saque}. Saldo atual: R$ {conta_atual.mostrar_saldo():.2f}')
+        else:
+            print('Conta não selecionada.')
+
+    elif opcao == 'e':
+        if conta_atual:
+            print('Extrato do Dia')
+            for transacao in conta_atual.historico.transacoes:
+                tipo = "Depósito" if transacao.valor > 0 else "Saque"
+                print(f'{tipo} de R$ {abs(transacao.valor):.2f} em {transacao.data_hora.strftime("%d/%m/%Y %H:%M:%S")}')
+            print(f'Saldo final: R$ {conta_atual.mostrar_saldo():.2f}')
+        else:
+            print('Conta não selecionada.')
+
+    elif opcao == 'q':
+        break
+
+    else:
+        print('Operação inválida, por favor selecionar novamente a operação desejada.')
